@@ -1,0 +1,397 @@
+
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Admin Dashboard | ALEX'S BUILDING & CONSTRUCTION</title>
+
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+  <div class="dashboard">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+
+      <div class="sidebar-logo">
+        <div class="logo-icon">A</div>
+
+        <div>
+          <h2>ALEX'S <span>BUILDING</span></h2>
+          <p>ADMIN PANEL</p>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+
+        <p class="nav-heading">MAIN MENU</p>
+
+        <a href="#overview" class="nav-link active" data-section="overview">
+          <span>▦</span> Overview
+        </a>
+
+        <a href="#bookings" class="nav-link" data-section="bookings">
+          <span>▣</span> Bookings
+          <span class="nav-count" id="booking-count">0</span>
+        </a>
+
+        <a href="#messages" class="nav-link" data-section="messages">
+          <span>✉</span> Messages
+          <span class="nav-count" id="message-count">0</span>
+        </a>
+
+        <p class="nav-heading">MANAGEMENT</p>
+
+        <a href="#customers" class="nav-link" data-section="customers">
+          <span>♙</span> Customers
+        </a>
+
+        <a href="#profile" class="nav-link" data-section="profile">
+          <span>♙</span> Profile
+        </a>
+
+        <a href="#settings" class="nav-link" data-section="settings">
+          <span>⚙</span> Settings
+        </a>
+
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="admin-profile">
+          <div class="profile-avatar">A</div>
+
+          <div>
+            <h4>Administrator</h4>
+            <p>System Admin</p>
+          </div>
+        </div>
+
+        <button class="logout-button" id="logout-button">
+          ↪ Log Out
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+      <!-- TOPBAR -->
+      <header class="topbar">
+
+        <button class="sidebar-toggle" id="sidebar-toggle">
+          ☰
+        </button>
+
+        <div>
+          <h2>Dashboard Overview</h2>
+          <p>Welcome to your administration panel.</p>
+        </div>
+
+        <div class="topbar-right">
+          <span class="admin-status">
+            <span class="status-dot"></span>
+            Admin
+          </span>
+        </div>
+
+      </header>
+
+      <!-- OVERVIEW -->
+      <section class="dashboard-section active" id="overview">
+
+        <div class="section-heading">
+          <div>
+            <h1>Overview</h1>
+            <p>Here's what's happening with your business.</p>
+          </div>
+
+          <span class="today-date" id="today-date"></span>
+        </div>
+
+        <!-- STATISTICS -->
+        <div class="stats-grid">
+
+          <div class="stat-card">
+            <div class="stat-icon orange">▣</div>
+            <p>Total Bookings</p>
+            <h2 id="total-bookings">0</h2>
+            <span>All project enquiries</span>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon blue">✉</div>
+            <p>New Messages</p>
+            <h2 id="total-messages">0</h2>
+            <span>Contact enquiries</span>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">✓</div>
+            <p>Completed</p>
+            <h2 id="completed-bookings">0</h2>
+            <span>Completed enquiries</span>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon purple">♙</div>
+            <p>Total Customers</p>
+            <h2 id="total-customers">0</h2>
+            <span>Unique customers</span>
+          </div>
+
+        </div>
+
+        <!-- RECENT ACTIVITY -->
+        <div class="content-card">
+
+          <div class="card-heading">
+            <div>
+              <h2>Recent Activity</h2>
+              <p>Keep track of the latest customer activity.</p>
+            </div>
+
+            <span class="live-label">ACTIVITY FEED</span>
+          </div>
+
+          <div id="recent-activity-list">
+
+            <div class="empty-state">
+              <div class="empty-icon">▤</div>
+              <h3>Loading recent activity...</h3>
+              <p>Your latest bookings and customer messages will appear here.</p>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- BOOKINGS SECTION -->
+      <section class="dashboard-section" id="bookings">
+
+        <div class="section-heading">
+          <div>
+            <h1>Bookings Management</h1>
+            <p>View and manage customer project enquiries.</p>
+          </div>
+        </div>
+
+        <div class="content-card">
+
+          <div class="booking-header">
+            <h2>All Bookings</h2>
+            <span id="booking-record-count">0 Bookings</span>
+          </div>
+
+          <!-- BOOKING STATUS FILTER -->
+          <div class="booking-filter">
+
+            <label for="booking-status-filter">
+              Filter by status:
+            </label>
+
+            <select id="booking-status-filter">
+              <option value="All">All Bookings</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Completed">Completed</option>
+            </select>
+
+          </div>
+
+          <div class="table-container">
+            <table class="data-table">
+
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Project Type</th>
+                  <th>Location</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+
+              <tbody id="bookings-table-body">
+                <tr>
+                  <td colspan="6">Loading bookings...</td>
+                </tr>
+              </tbody>
+
+            </table>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- MESSAGES SECTION -->
+      <section class="dashboard-section" id="messages">
+
+        <div class="section-heading">
+          <div>
+            <h1>Messages Inbox</h1>
+            <p>Read and manage messages sent by your customers.</p>
+          </div>
+        </div>
+
+        <div class="content-card">
+
+          <div class="booking-header">
+            <h2>Customer Messages</h2>
+            <span id="messages-total">0 Messages</span>
+          </div>
+
+          <div id="messages-list">
+
+            <div class="empty-state">
+              <div class="empty-icon">✉</div>
+              <h3>Loading messages...</h3>
+              <p>Customer messages will appear here.</p>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- CUSTOMERS -->
+      <section class="dashboard-section" id="customers">
+
+        <div class="section-heading">
+          <div>
+            <h1>Customers</h1>
+            <p>View customers who have contacted the business.</p>
+          </div>
+        </div>
+
+        <div class="customer-search">
+          <input
+            type="search"
+            id="customer-search"
+            placeholder="Search customers by name or email..."
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="content-card" id="customers-list">
+
+          <div class="empty-state">
+            <div class="empty-icon">♙</div>
+            <h3>No customers yet</h3>
+            <p>Customer information will appear here when enquiries are received.</p>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- PROFILE SECTION -->
+      <section class="dashboard-section" id="profile">
+
+        <div class="section-heading">
+          <div>
+            <h1>My Profile</h1>
+            <p>View your administrator account information.</p>
+          </div>
+        </div>
+
+        <div class="content-card">
+          <h2>Personal Information</h2>
+
+          <div class="profile-details">
+            <p><strong>Name:</strong> <span id="profile-name">Loading...</span></p>
+            <p><strong>Email:</strong> <span id="profile-email">Loading...</span></p>
+            <p><strong>Role:</strong> <span id="profile-role">Loading...</span></p>
+          </div>
+        </div>
+
+        <div class="content-card">
+          <h2>Account Security</h2>
+          <p>Your account is protected by administrator authentication.</p>
+          <p>Password management is available in Settings.</p>
+        </div>
+
+      </section>
+
+      <!-- SETTINGS SECTION -->
+      <section class="dashboard-section" id="settings">
+
+        <div class="section-heading">
+          <div>
+            <h1>Settings</h1>
+            <p>Manage your dashboard preferences and security.</p>
+          </div>
+        </div>
+
+        <div class="content-card">
+          <h2>Account Security</h2>
+          <p>Keep your administrator account secure.</p>
+
+          <form id="change-password-form">
+
+            <label for="current-password">Current Password</label>
+            <input
+              type="password"
+              id="current-password"
+              required
+            >
+
+            <label for="new-password">New Password</label>
+            <input
+              type="password"
+              id="new-password"
+              required
+              minlength="8"
+            >
+
+            <label for="confirm-password">Confirm New Password</label>
+            <input
+              type="password"
+              id="confirm-password"
+              required
+              minlength="8"
+            >
+
+            <button type="submit">Update Password</button>
+
+            <p id="password-message"></p>
+
+          </form>
+        </div>
+
+        <div class="content-card">
+          <h2>Dashboard Preferences</h2>
+
+          <label>
+            <input type="checkbox" id="email-notifications">
+            Enable email notifications
+          </label>
+
+          <p>Your notification preference is saved to your administrator account.</p>
+        </div>
+
+      </section>
+
+      <!-- FOOTER -->
+      <footer class="dashboard-footer">
+        <p>© <span id="current-year"></span> ALEX'S BUILDING & CONSTRUCTION</p>
+        <p>Admin Dashboard</p>
+      </footer>
+
+    </main>
+
+  </div>
+
+  <script src="dashboard.js"></script>
+
+</body>
+</html>
