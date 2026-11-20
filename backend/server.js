@@ -3,7 +3,7 @@ import express from "express";
 import session from "express-session";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import db from "./database.js";
+import db, { initializeDatabase } from "./database.js";
 import authRoutes from "./auth.js";
 
 import {
@@ -16,12 +16,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const sessionSecret = process.env.SESSION_SECRET;
 
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET is required.");
+}
+
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
 }
 
 // MIDDLEWARE
@@ -34,13 +38,13 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: "lax",
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
     maxAge: 1000 * 60 * 60
   }
 }));
 
 // PROTECT ADMIN DASHBOARD
-app.use("/Admin", (req, res, next) => {
+app.use("/admin", (req, res, next) => {
   const publicFiles = [
     "/login.html",
     "/login.css",
@@ -52,7 +56,7 @@ app.use("/Admin", (req, res, next) => {
   }
 
   if (!req.session.admin) {
-    return res.redirect("/Admin/login.html");
+    return res.redirect("/admin/login.html");
   }
 
   next();
@@ -72,13 +76,15 @@ app.get("/", (req, res) => {
 // SEND BUSINESS NOTIFICATION IF ENABLED
 async function notifyBusiness(type, item) {
   try {
-    const admin = db.prepare(`
+    const result = await db.query(`
       SELECT email
       FROM admins
       WHERE email_notifications = 1
       ORDER BY id ASC
       LIMIT 1
-    `).get();
+    `);
+
+    const admin = result.rows[0];
 
     if (!admin) {
       return false;
@@ -137,9 +143,12 @@ app.patch("/api/bookings/:id/status", async (req, res) => {
       });
     }
 
-    const booking = db.prepare(
-      "SELECT * FROM bookings WHERE id = ?"
-    ).get(bookingId);
+    const bookingResult = await db.query(
+      "SELECT * FROM bookings WHERE id = $1",
+      [bookingId]
+    );
+
+    const booking = bookingResult.rows[0];
 
     if (!booking) {
       return res.status(404).json({
@@ -150,9 +159,10 @@ app.patch("/api/bookings/:id/status", async (req, res) => {
 
     const statusChanged = booking.status !== status;
 
-    db.prepare(
-      "UPDATE bookings SET status = ? WHERE id = ?"
-    ).run(status, bookingId);
+    await db.query(
+      "UPDATE bookings SET status = $1 WHERE id = $2",
+      [status, bookingId]
+    );
 
     let emailSent = false;
 
@@ -193,7 +203,7 @@ app.patch("/api/bookings/:id/status", async (req, res) => {
 });
 
 // GET ALL BOOKINGS (ADMIN ONLY)
-app.get("/api/bookings", (req, res) => {
+app.get("/api/bookings", async (req, res) => {
   if (!req.session.admin) {
     return res.status(401).json({
       success: false,
@@ -202,16 +212,16 @@ app.get("/api/bookings", (req, res) => {
   }
 
   try {
-    const bookings = db.prepare(`
+    const result = await db.query(`
       SELECT id, name, email, phone, project,
              location, details, status, created_at
       FROM bookings
       ORDER BY created_at DESC
-    `).all();
+    `);
 
     res.json({
       success: true,
-      bookings
+      bookings: result.rows
     });
 
   } catch (error) {
@@ -225,7 +235,7 @@ app.get("/api/bookings", (req, res) => {
 });
 
 // GET CUSTOMERS FROM BOOKINGS (ADMIN ONLY)
-app.get("/api/customers", (req, res) => {
+app.get("/api/customers", async (req, res) => {
   if (!req.session.admin) {
     return res.status(401).json({
       success: false,
@@ -234,21 +244,21 @@ app.get("/api/customers", (req, res) => {
   }
 
   try {
-    const customers = db.prepare(`
+    const result = await db.query(`
       SELECT
-        name,
-        email,
-        phone,
-        COUNT(*) AS booking_count,
+        (array_agg(name ORDER BY created_at DESC))[1] AS name,
+        (array_agg(email ORDER BY created_at DESC))[1] AS email,
+        (array_agg(phone ORDER BY created_at DESC))[1] AS phone,
+        COUNT(*)::int AS booking_count,
         MAX(created_at) AS last_booking
       FROM bookings
       GROUP BY LOWER(TRIM(email))
       ORDER BY MAX(created_at) DESC
-    `).all();
+    `);
 
     res.json({
       success: true,
-      customers
+      customers: result.rows
     });
 
   } catch (error) {
@@ -280,20 +290,19 @@ app.post("/api/bookings", async (req, res) => {
       });
     }
 
-    const statement = db.prepare(`
+    const result = await db.query(`
       INSERT INTO bookings
       (name, email, phone, project, location, details)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = statement.run(
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
+    `, [
       name,
       email,
       phone || null,
       project,
       location || null,
       details || null
-    );
+    ]);
 
     const booking = {
       name,
@@ -312,7 +321,7 @@ app.post("/api/bookings", async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Booking saved successfully!",
-      bookingId: Number(result.lastInsertRowid),
+      bookingId: Number(result.rows[0].id),
       notificationSent
     });
 
@@ -327,7 +336,7 @@ app.post("/api/bookings", async (req, res) => {
 });
 
 // GET CUSTOMER MESSAGES (ADMIN ONLY)
-app.get("/api/messages", (req, res) => {
+app.get("/api/messages", async (req, res) => {
   if (!req.session.admin) {
     return res.status(401).json({
       success: false,
@@ -336,15 +345,15 @@ app.get("/api/messages", (req, res) => {
   }
 
   try {
-    const messages = db.prepare(`
+    const result = await db.query(`
       SELECT id, name, email, subject, message, status, created_at
       FROM messages
       ORDER BY created_at DESC
-    `).all();
+    `);
 
     res.json({
       success: true,
-      messages
+      messages: result.rows
     });
 
   } catch (error) {
@@ -388,9 +397,12 @@ app.post("/api/messages/:id/reply", async (req, res) => {
       });
     }
 
-    const customerMessage = db.prepare(
-      "SELECT * FROM messages WHERE id = ?"
-    ).get(messageId);
+    const messageResult = await db.query(
+      "SELECT * FROM messages WHERE id = $1",
+      [messageId]
+    );
+
+    const customerMessage = messageResult.rows[0];
 
     if (!customerMessage) {
       return res.status(404).json({
@@ -417,9 +429,10 @@ app.post("/api/messages/:id/reply", async (req, res) => {
       });
     }
 
-    db.prepare(
-      "UPDATE messages SET status = ? WHERE id = ?"
-    ).run("Replied", messageId);
+    await db.query(
+      "UPDATE messages SET status = $1 WHERE id = $2",
+      ["Replied", messageId]
+    );
 
     console.log(
       `Reply email sent for customer message ${messageId}`
@@ -457,17 +470,16 @@ app.post("/api/messages", async (req, res) => {
       });
     }
 
-    const statement = db.prepare(`
+    const result = await db.query(`
       INSERT INTO messages (name, email, subject, message)
-      VALUES (?, ?, ?, ?)
-    `);
-
-    const result = statement.run(
+      VALUES ($1, $2, $3, $4)
+      RETURNING id
+    `, [
       name,
       email,
       subject || null,
       message
-    );
+    ]);
 
     const customerMessage = {
       name,
@@ -484,7 +496,7 @@ app.post("/api/messages", async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Message saved successfully!",
-      messageId: Number(result.lastInsertRowid),
+      messageId: Number(result.rows[0].id),
       notificationSent
     });
 
@@ -498,7 +510,15 @@ app.post("/api/messages", async (req, res) => {
   }
 });
 
-// START SERVER
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// START SERVER AFTER DATABASE INITIALIZATION
+try {
+  await initializeDatabase();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+
+} catch (error) {
+  console.error("Server startup failed:", error);
+  process.exit(1);
+}

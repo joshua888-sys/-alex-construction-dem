@@ -53,7 +53,7 @@ if (loginForm) {
       message.textContent = 'Login successful!';
       message.style.color = '#4caf50';
 
-      window.location.href = '/Admin/dashboard.html';
+      window.location.href = '/admin/dashboard.html';
 
     } catch (error) {
       message.textContent = error.message;

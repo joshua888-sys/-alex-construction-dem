@@ -17,9 +17,12 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    const admin = db.prepare(
-      "SELECT * FROM admins WHERE email = ?"
-    ).get(email.trim().toLowerCase());
+    const result = await db.query(
+      "SELECT * FROM admins WHERE email = $1",
+      [email.trim().toLowerCase()]
+    );
+
+    const admin = result.rows[0];
 
     if (!admin) {
       return res.status(401).json({
@@ -74,7 +77,7 @@ router.post("/login", async (req, res) => {
 });
 
 // CHECK LOGGED-IN ADMINISTRATOR
-router.get("/me", (req, res) => {
+router.get("/me", async (req, res) => {
   if (!req.session.admin) {
     return res.status(401).json({
       success: false,
@@ -83,11 +86,13 @@ router.get("/me", (req, res) => {
   }
 
   try {
-    const admin = db.prepare(`
+    const result = await db.query(`
       SELECT id, name, email, role, email_notifications
       FROM admins
-      WHERE id = ?
-    `).get(req.session.admin.id);
+      WHERE id = $1
+    `, [req.session.admin.id]);
+
+    const admin = result.rows[0];
 
     if (!admin) {
       return res.status(404).json({
@@ -121,7 +126,7 @@ router.get("/me", (req, res) => {
 });
 
 // UPDATE EMAIL NOTIFICATION PREFERENCE
-router.post("/email-notifications", (req, res) => {
+router.post("/email-notifications", async (req, res) => {
   if (!req.session.admin) {
     return res.status(401).json({
       success: false,
@@ -139,13 +144,13 @@ router.post("/email-notifications", (req, res) => {
       });
     }
 
-    const result = db.prepare(`
+    const result = await db.query(`
       UPDATE admins
-      SET email_notifications = ?
-      WHERE id = ?
-    `).run(enabled ? 1 : 0, req.session.admin.id);
+      SET email_notifications = $1
+      WHERE id = $2
+    `, [enabled ? 1 : 0, req.session.admin.id]);
 
-    if (result.changes === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
         message: "Administrator account not found."
@@ -198,9 +203,12 @@ router.post("/change-password", async (req, res) => {
       });
     }
 
-    const admin = db.prepare(
-      "SELECT password FROM admins WHERE id = ?"
-    ).get(req.session.admin.id);
+    const result = await db.query(
+      "SELECT password FROM admins WHERE id = $1",
+      [req.session.admin.id]
+    );
+
+    const admin = result.rows[0];
 
     if (!admin) {
       return res.status(404).json({
@@ -223,9 +231,10 @@ router.post("/change-password", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    db.prepare(
-      "UPDATE admins SET password = ? WHERE id = ?"
-    ).run(hashedPassword, req.session.admin.id);
+    await db.query(
+      "UPDATE admins SET password = $1 WHERE id = $2",
+      [hashedPassword, req.session.admin.id]
+    );
 
     res.json({
       success: true,

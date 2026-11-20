@@ -90,7 +90,7 @@ if (logoutButton) {
         throw new Error('Logout failed. Please try again.');
       }
 
-      window.location.href = '/Admin/login.html';
+      window.location.href = '/admin/login.html';
 
     } catch (error) {
       alert(error.message);
@@ -108,7 +108,7 @@ async function loadAdminProfile() {
     });
 
     if (!response.ok) {
-      window.location.href = '/Admin/login.html';
+      window.location.href = '/admin/login.html';
       return;
     }
 
